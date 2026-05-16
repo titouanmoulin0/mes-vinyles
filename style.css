@@ -176,7 +176,11 @@ header {
     gap: 48px;
 }
 
-.section-header a {
+.envies .section-title {
+    color: var(--black);
+}
+
+.section-header a:nth-child(1) {
     display: flex;
     justify-content: center;
     cursor: pointer;
