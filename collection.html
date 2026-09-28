@@ -120,7 +120,8 @@
         );
 
         let allVinyles = [];
-        let currentSort = 'artiste-asc';
+        const urlSort = new URLSearchParams(window.location.search).get('sort');
+        let currentSort = urlSort || 'artiste-asc';
 
         // ── SORT ─────────────────────────────────────────────
         function sortVinyles(items, sort) {
@@ -188,6 +189,11 @@
         // ── SORT DROPDOWN ────────────────────────────────────
         const sortBtn      = document.getElementById('sortBtn');
         const sortDropdown = document.getElementById('sortDropdown');
+
+        // Sync bouton actif avec le tri initial (depuis URL)
+        document.querySelectorAll('.sort-option').forEach(b => {
+            b.classList.toggle('active', b.dataset.sort === currentSort);
+        });
 
         sortBtn.addEventListener('click', (e) => {
             e.stopPropagation();

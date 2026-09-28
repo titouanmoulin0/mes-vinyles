@@ -693,6 +693,7 @@ header {
     font-size: 13px;
     line-height: 1;
     transition: background 0.2s, color 0.2s;
+    background: var(--orange);
 }
 
 .detail-close:hover {
