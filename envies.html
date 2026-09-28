@@ -55,83 +55,180 @@
         </div>
     </header>
 
-    <!-- CONTENU -->
-    <div class="envies-soon">
-        <div class="envies-soon-inner">
-            <img class="envies-vinyl" src="assets/vinyle.png" alt="vinyle" />
-            <h1 class="envies-title">Les Envies</h1>
-            <p class="envies-subtitle">Bientôt disponible</p>
-            <p class="envies-text">Cette section est en construction.<br>Elle arrivera très bientôt.</p>
-            <a href="index.html" class="btn-collection">Retour à l'accueil</a>
-        </div>
+    <!-- PAGE HEADER -->
+    <div class="envies-page-header">
+        <h1 class="envies-page-title">Ma Wishlist</h1>
     </div>
 
-    <style>
-        .envies-soon {
-            height: calc(100dvh - 60px);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            padding: 24px;
-        }
-
-        .envies-soon-inner {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .envies-vinyl {
-            width: 120px;
-            aspect-ratio: 1;
-            border-radius: 50%;
-            animation: vinylSpin 8s linear infinite;
-            margin-bottom: 8px;
-            opacity: 0.7;
-        }
-
-        .envies-title {
-            font-family: 'Limelight', sans-serif;
-            font-size: 52px;
-            line-height: 1;
-            text-transform: uppercase;
-            color: var(--black);
-        }
-
-        .envies-subtitle {
-            font-family: 'Inter', sans-serif;
-            font-weight: 500;
-            font-size: 14px;
-            letter-spacing: 0.12em;
-            text-transform: uppercase;
-            color: var(--cream);
-        }
-
-        .envies-text {
-            font-family: 'Inter', sans-serif;
-            font-size: 13px;
-            line-height: 1.6;
-            color: var(--black);
-            opacity: 0.6;
-            margin-bottom: 8px;
-        }
-
-        @media (min-width: 768px) {
-            .envies-soon { height: calc(100dvh - 68px); }
-            .envies-title { font-size: 80px; }
-        }
-    </style>
+    <!-- SECTIONS (remplies dynamiquement) -->
+    <div id="envies-content"></div>
 
     <script type="module">
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+
+        const supabase = createClient(
+            'https://zajqhodbbxwzkauupsch.supabase.co',
+            'sb_publishable_Yu8voA0zf_wgOHIMRMwTNg_7A_tb__T'
+        );
+
+        // ── CARTE ────────────────────────────────────────────
+        function cardHTML(v) {
+            const cover = v.cover_url || '';
+            return `
+                <div class="envie-card" data-nom="${v.nom}" data-artiste="${v.artiste}">
+                    ${cover ? `<img src="${cover}" alt="${v.nom}" loading="lazy" />` : ''}
+                    <div class="envie-overlay"></div>
+                    <div class="envie-info">
+                        <span class="envie-info-nom">${v.nom}</span>
+                        <span class="envie-info-artiste">${v.artiste}</span>
+                    </div>
+                </div>`;
+        }
+
+        // ── SECTION ──────────────────────────────────────────
+        function sectionHTML(titre, desc, items, id, showSearch = false) {
+            const cards = items.length
+                ? items.map(cardHTML).join('')
+                : '<p class="envies-empty">Rien pour le moment</p>';
+
+            const searchHTML = showSearch ? `
+                <div class="envies-reste-search">
+                    <svg class="search-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <circle cx="6.5" cy="6.5" r="5" stroke="#FFFFFF" stroke-width="1.5"/>
+                        <path d="M10.5 10.5L14 14" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>
+                    <input class="search-input" type="text" id="search-reste" placeholder="Rechercher un album" autocomplete="off" spellcheck="false" />
+                </div>` : '';
+
+            return `
+                <div class="envies-section" id="section-${id}">
+                    <div class="envies-section-header">
+                        <h2 class="envies-section-title">${titre}</h2>
+                        ${desc ? `<p class="envies-section-desc">${desc}</p>` : ''}
+                    </div>
+                    ${searchHTML}
+                    <div class="envies-grid" id="grid-${id}">${cards}</div>
+                </div>`;
+        }
+
+        // ── BIND OVERLAY CLICS ───────────────────────────────
+        function bindCardClicks(container) {
+            container.querySelectorAll('.envie-card').forEach(card => {
+                card.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const isActive = card.classList.contains('active');
+                    document.querySelectorAll('.envie-card.active').forEach(c => c.classList.remove('active'));
+                    if (!isActive) card.classList.add('active');
+                });
+            });
+        }
+
+        // ── RENDER ───────────────────────────────────────────
+        function renderAll(data) {
+            const arrives   = data.filter(v => v.categorie === 'arrive');
+            const priorites = data.filter(v => v.categorie === 'priorite');
+            const reste     = data.filter(v => !v.categorie)
+                .sort((a, b) => a.artiste.localeCompare(b.artiste, 'fr', { sensitivity: 'base' }));
+
+            let html = '';
+
+            if (arrives.length) {
+                html += sectionHTML(
+                    'Ils arrivent !!!',
+                    "Je me gratte les veines tellement j'ai hâte de les recevoir !",
+                    arrives,
+                    'arrive'
+                );
+            }
+
+            if (priorites.length) {
+                html += sectionHTML(
+                    'Les prochains',
+                    "Dès que j'ai de l'argent ça va partir DIRECT !",
+                    priorites,
+                    'priorite'
+                );
+            }
+
+            if (reste.length) {
+                html += sectionHTML('Le reste', '', reste, 'reste', true);
+            }
+
+            if (!html) {
+                html = '<p style="text-align:center;padding:48px 24px;opacity:0.4;font-size:13px;">La wishlist est vide pour le moment.</p>';
+            }
+
+            const content = document.getElementById('envies-content');
+            content.innerHTML = html;
+
+            // Bind clics overlay sur toutes les cartes
+            bindCardClicks(content);
+
+            // Recherche dans "Le reste"
+            const searchReste = document.getElementById('search-reste');
+            if (searchReste) {
+                searchReste.addEventListener('input', (e) => {
+                    const q = e.target.value.trim().toLowerCase();
+                    const grid = document.getElementById('grid-reste');
+                    const filtered = q
+                        ? reste.filter(v =>
+                            v.nom.toLowerCase().includes(q) ||
+                            v.artiste.toLowerCase().includes(q))
+                        : reste;
+                    grid.innerHTML = filtered.length
+                        ? filtered.map(cardHTML).join('')
+                        : '<p class="envies-empty">Aucun résultat</p>';
+                    bindCardClicks(grid);
+                });
+            }
+        }
+
+        // Fermer overlay au clic en dehors
+        document.addEventListener('click', () => {
+            document.querySelectorAll('.envie-card.active').forEach(c => c.classList.remove('active'));
+        });
+
+        // ── SKELETONS ────────────────────────────────────────
+        function showSkeletons() {
+            document.getElementById('envies-content').innerHTML = `
+                <div class="envies-section">
+                    <div class="envies-grid">
+                        <div class="envie-skeleton"></div>
+                        <div class="envie-skeleton"></div>
+                        <div class="envie-skeleton"></div>
+                        <div class="envie-skeleton"></div>
+                    </div>
+                </div>`;
+        }
+
+        // ── INIT ─────────────────────────────────────────────
+        async function init() {
+            showSkeletons();
+            try {
+                const { data, error } = await supabase
+                    .from('envies')
+                    .select('id, nom, artiste, cover_url, categorie')
+                    .order('nom', { ascending: true });
+
+                if (error) throw error;
+                renderAll(data);
+            } catch (err) {
+                console.error(err);
+                document.getElementById('envies-content').innerHTML =
+                    '<p style="text-align:center;padding:48px;opacity:0.4;font-size:13px;">Erreur de connexion</p>';
+            }
+        }
+
+        init();
+
+        // ── MENU ─────────────────────────────────────────────
         const overlay   = document.getElementById('menuOverlay');
         const hamburger = document.getElementById('hamburger');
         const closeBtn  = document.getElementById('menuClose');
 
-        hamburger?.addEventListener('click', () => overlay.classList.add('open'));
-        closeBtn?.addEventListener('click',  () => overlay.classList.remove('open'));
-        overlay?.addEventListener('click', (e) => {
+        hamburger.addEventListener('click', () => overlay.classList.add('open'));
+        closeBtn.addEventListener('click',  () => overlay.classList.remove('open'));
+        overlay.addEventListener('click', (e) => {
             if (e.target === overlay) overlay.classList.remove('open');
         });
     </script>
