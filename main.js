@@ -19,14 +19,26 @@ function cardHTML(v) {
         </a>`;
 }
 
-function renderGrid(id, items) {
+function envieCardHTML(v) {
+    const cover = v.cover_url || `assets/covers/${v.id}.jpg`;
+    return `
+        <a class="card" href="envies.html">
+            <img src="${cover}" alt="${v.nom}" loading="lazy" />
+            <div class="card-info">
+                <div class="card-album">${v.nom}</div>
+                <div class="card-artist">${v.artiste}</div>
+            </div>
+        </a>`;
+}
+
+function renderGrid(id, items, renderFn = cardHTML) {
     const el = document.getElementById(id);
     if (!el) return;
     if (!items || !items.length) {
         el.innerHTML = '<div class="empty">Aucun vinyle pour l\'instant</div>';
         return;
     }
-    el.innerHTML = items.map(cardHTML).join('');
+    el.innerHTML = items.map(renderFn).join('');
 }
 
 // ── SUPABASE ─────────────────────────────────────────────────
@@ -40,15 +52,17 @@ async function init() {
             .order('date_acquisition', { ascending: false })
             .limit(6);
 
-        const { data: envies } = await supabase
-            .from('vinyles')
-            .select('id, nom, artiste, cover_url')
-            .eq('type', 'envie')
-            .order('created_at', { ascending: false })
-            .limit(6);
+        const { data: enviesRaw } = await supabase
+            .from('envies')
+            .select('id, nom, artiste, cover_url');
+
+        // 6 envies aléatoires
+        const envies = enviesRaw
+            ? enviesRaw.sort(() => Math.random() - 0.5).slice(0, 6)
+            : [];
 
         renderGrid('grid-nouveaux', nouveaux);
-        renderGrid('grid-envies', envies);
+        renderGrid('grid-envies', envies, envieCardHTML);
 
         // Drag-to-scroll activé après le rendu des cards
         if (window.innerWidth >= 768) {
